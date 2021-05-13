@@ -37,7 +37,7 @@ impl Default for Builder<group::ByName, group::ByMessage> {
             event_group: group::ByMessage,
             time: quanta::Clock::new(),
             bubble_spans: true,
-            span_close_events: false,
+            span_close_events: true,
         }
     }
 }
@@ -95,7 +95,7 @@ impl<S, E> Builder<S, E> {
         }
     }
 
-    /// By default, a [`TimingSubscriber`] or [`TimingLayer`] won't record a [span closure] as an
+    /// By default, a [`TimingSubscriber`] or [`TimingLayer`] records a [span closure] as an
     /// event.
     ///
     /// ```text
@@ -110,9 +110,9 @@ impl<S, E> Builder<S, E> {
     /// c will record `t_c - t_bar_close`.
     ///
     /// [span closure]: https://docs.rs/tracing/0.1.25/tracing/span/index.html#closing-spans
-    pub fn span_close_events(self) -> Self {
+    pub fn no_span_close_events(self) -> Self {
         Builder {
-            span_close_events: true,
+            span_close_events: false,
             ..self
         }
     }

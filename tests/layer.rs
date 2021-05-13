@@ -27,7 +27,7 @@ fn by_name() {
     sid.downcast(&d).unwrap().with_histograms(|hs| {
         assert_eq!(hs.len(), 1);
         let hs = &hs["foo"];
-        assert_eq!(hs.len(), 1);
+        assert_eq!(hs.len(), 2);
         #[cfg(windows)]
         assert!(hs.contains_key("event tests\\layer.rs:21"));
         #[cfg(not(windows))]
@@ -70,7 +70,7 @@ fn by_target() {
     sid.downcast(&d).unwrap().with_histograms(|hs| {
         assert_eq!(hs.len(), 1);
         let hs = &hs["layer"];
-        assert_eq!(hs.len(), 1);
+        assert_eq!(hs.len(), 2);
         assert!(hs.contains_key("e"));
     })
 }
@@ -94,7 +94,7 @@ fn by_default() {
     sid.downcast(&d).unwrap().with_histograms(|hs| {
         assert_eq!(hs.len(), 1);
         let hs = &hs["foo"];
-        assert_eq!(hs.len(), 2);
+        assert_eq!(hs.len(), 3);
         assert!(hs.contains_key("fast"));
         assert!(hs.contains_key("slow"));
     })
@@ -122,7 +122,7 @@ fn by_field() {
     sid.downcast(&d).unwrap().with_histograms(|hs| {
         assert_eq!(hs.len(), 1);
         let hs = &hs["span"];
-        assert_eq!(hs.len(), 2);
+        assert_eq!(hs.len(), 3);
         assert!(hs.contains_key("event1"));
         assert!(hs.contains_key("event2"));
     })
@@ -155,7 +155,7 @@ fn custom_time() {
     sid.downcast(&d).unwrap().with_histograms(|hs| {
         assert_eq!(hs.len(), 1);
         let hs = &hs["span"];
-        assert_eq!(hs.len(), 3);
+        assert_eq!(hs.len(), 4);
         assert!(hs.contains_key("event1"));
         assert!(hs.contains_key("event2"));
         assert_eq!(hs["event1"].max(), 1);
@@ -169,7 +169,9 @@ fn custom_time() {
 
 #[test]
 fn event_order() {
-    let s = Builder::default().layer(|| Histogram::new_with_max(200_000_000, 1).unwrap());
+    let s = Builder::default()
+        .no_span_close_events()
+        .layer(|| Histogram::new_with_max(200_000_000, 1).unwrap());
     let sid = s.downcaster();
     let d = Dispatch::new(s.with_subscriber(Registry::default()));
     let d2 = d.clone();
@@ -195,7 +197,9 @@ fn event_order() {
 
 #[test]
 fn samples() {
-    let s = Builder::default().layer(|| Histogram::new_with_max(1_000_000, 1).unwrap());
+    let s = Builder::default()
+        .no_span_close_events()
+        .layer(|| Histogram::new_with_max(1_000_000, 1).unwrap());
     let sid = s.downcaster();
     let d = Dispatch::new(s.with_subscriber(Registry::default()));
     let d2 = d.clone();
@@ -264,7 +268,7 @@ fn dupe_span() {
     sid.downcast(&d).unwrap().with_histograms(|hs| {
         assert_eq!(hs.len(), 1);
         let hs = &hs["foo"];
-        assert_eq!(hs.len(), 2);
+        assert_eq!(hs.len(), 3);
         assert!(hs.contains_key("thread1"));
         assert!(hs.contains_key("thread2"));
     })
@@ -298,7 +302,7 @@ fn same_event_two_threads() {
     sid.downcast(&d).unwrap().with_histograms(|hs| {
         assert_eq!(hs.len(), 1);
         let hs = &hs["span"];
-        assert_eq!(hs.len(), 2);
+        assert_eq!(hs.len(), 3);
         assert!(hs.contains_key("event1"));
         assert!(hs.contains_key("event2"));
     })
@@ -326,7 +330,7 @@ fn by_field_typed() {
     sid.downcast(&d).unwrap().with_histograms(|hs| {
         assert_eq!(hs.len(), 1);
         let hs = &hs["foo"];
-        assert_eq!(hs.len(), 3);
+        assert_eq!(hs.len(), 4);
         assert!(hs.contains_key("1"));
         assert!(hs.contains_key("true"));
         assert!(hs.contains_key("-1"));
@@ -335,11 +339,13 @@ fn by_field_typed() {
 
 #[test]
 fn informed_histogram_constructor() {
-    let s = Builder::default().layer_informed(|s: &_, e: &_| {
-        assert_eq!(*s, "span");
-        assert_eq!(e, "event");
-        Histogram::new_with_max(200_000_000, 1).unwrap()
-    });
+    let s = Builder::default()
+        .no_span_close_events()
+        .layer_informed(|s: &_, e: &_| {
+            assert_eq!(*s, "span");
+            assert_eq!(e, "event");
+            Histogram::new_with_max(200_000_000, 1).unwrap()
+        });
     let sid = s.downcaster();
     let d = Dispatch::new(s.with_subscriber(Registry::default()));
     let d2 = d.clone();
@@ -408,7 +414,9 @@ fn free_standing_event() {
 
 #[test]
 fn nested() {
-    let s = Builder::default().layer(|| Histogram::new_with_max(200_000_000, 1).unwrap());
+    let s = Builder::default()
+        .no_span_close_events()
+        .layer(|| Histogram::new_with_max(200_000_000, 1).unwrap());
     let sid = s.downcaster();
     let d = Dispatch::new(s.with_subscriber(Registry::default()));
     let d2 = d.clone();
@@ -468,7 +476,9 @@ fn nested() {
 
 #[test]
 fn nested_diff() {
-    let s = Builder::default().layer(|| Histogram::new_with_max(200_000_000, 1).unwrap());
+    let s = Builder::default()
+        .no_span_close_events()
+        .layer(|| Histogram::new_with_max(200_000_000, 1).unwrap());
     let sid = s.downcaster();
     let d = Dispatch::new(s.with_subscriber(Registry::default()));
     let d2 = d.clone();
@@ -629,9 +639,7 @@ fn nested_bubble() {
 
 #[test]
 fn span_close_event() {
-    let s = Builder::default()
-        .span_close_events()
-        .layer(|| Histogram::new_with_max(200_000_000, 1).unwrap());
+    let s = Builder::default().layer(|| Histogram::new_with_max(200_000_000, 1).unwrap());
     let sid = s.downcaster();
     let d = Dispatch::new(s.with_subscriber(Registry::default()));
     let d2 = d.clone();
@@ -698,7 +706,7 @@ fn explicit_span_parent() {
         for &s in &["bar", "foo"] {
             assert!(hs.contains_key(s));
             assert!(hs[s].contains_key("event"));
-            assert_eq!(hs[s].len(), 1);
+            assert_eq!(hs[s].len(), 2);
             assert_eq!(hs[s]["event"].len(), 1);
         }
 
@@ -728,7 +736,7 @@ fn explicit_event_parent() {
         assert_eq!(hs.len(), 1);
         assert!(hs.contains_key("foo"));
         assert!(hs["foo"].contains_key("event"));
-        assert_eq!(hs["foo"].len(), 1);
+        assert_eq!(hs["foo"].len(), 2);
     })
 }
 
