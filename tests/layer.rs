@@ -125,6 +125,8 @@ fn by_field() {
         assert_eq!(hs.len(), 3);
         assert!(hs.contains_key("event1"));
         assert!(hs.contains_key("event2"));
+        println!("{:?}", hs.keys());
+        assert!(hs.contains_key("close"));
     })
 }
 
